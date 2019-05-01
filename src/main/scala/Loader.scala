@@ -1,14 +1,17 @@
-import java.io.{BufferedInputStream, BufferedOutputStream, ByteArrayInputStream, FileOutputStream, File => JFile}
+import java.io.{BufferedInputStream, BufferedOutputStream, ByteArrayInputStream, FileOutputStream}
 
 import better.files._
 import cats.effect.IO
+import cats.effect.IO._
 import cats.instances.list._
-import cats.syntax.traverse._
+import cats.syntax.parallel._
 import journal.Logger
 import kuyfi.TZDB.Row
 import kuyfi.TZDBParser
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
+
+import scala.concurrent.ExecutionContext
 
 object Loader {
 
@@ -17,22 +20,24 @@ object Loader {
   private val suffix = ".tar.gz"
 
   /**
-    * Fetches all TZ data archives from IANA's website according to the list in "input.txt".
+    * Fetches all TZ data archives that are listed in the input file.
     * Each version is then parsed into a list of rows.
     *
+    * @param fileName the input file
     * @param tmpDir a temporary folder where archives will be downloaded and unpacked
     * @return pairs of TZ version strings to their parsed rows
     */
-  def getAll(tmpDir: File): IO[List[(String, List[Row])]] = {
-    readInput.flatMap { versions =>
+  def getAll(fileName: String, tmpDir: File): IO[List[(String, List[Row])]] = {
+    implicit val cs = IO.contextShift(ExecutionContext.global)
+    readInput(fileName).flatMap { versions =>
       versions
         .map(version => process(tmpDir / version, version))
-        .sequence
+        .parSequence
     }
   }
 
-  private def readInput: IO[List[String]] = IO {
-    Resource.getAsStream("input.txt").lines.toList
+  private def readInput(fileName: String): IO[List[String]] = IO {
+    Resource.getAsStream(fileName).lines.toList
   }
 
   private def process(dest: File, version: String): IO[(String, List[Row])] = {
