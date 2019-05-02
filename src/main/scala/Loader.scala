@@ -1,8 +1,8 @@
 import java.io.{BufferedInputStream, BufferedOutputStream, ByteArrayInputStream, FileOutputStream}
 
 import better.files._
-import cats.effect.IO
 import cats.effect.IO._
+import cats.effect.{ContextShift, IO}
 import cats.instances.list._
 import cats.syntax.parallel._
 import journal.Logger
@@ -10,8 +10,6 @@ import kuyfi.TZDB.Row
 import kuyfi.TZDBParser
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
-
-import scala.concurrent.ExecutionContext
 
 object Loader {
 
@@ -27,8 +25,7 @@ object Loader {
     * @param tmpDir a temporary folder where archives will be downloaded and unpacked
     * @return pairs of TZ version strings to their parsed rows
     */
-  def getAll(fileName: String, tmpDir: File): IO[List[(String, List[Row])]] = {
-    implicit val cs = IO.contextShift(ExecutionContext.global)
+  def getAll(fileName: String, tmpDir: File)(implicit cs: ContextShift[IO]): IO[List[(String, List[Row])]] = {
     readInput(fileName).flatMap { versions =>
       versions
         .map(version => process(tmpDir / version, version))

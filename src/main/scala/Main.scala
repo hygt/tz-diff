@@ -37,7 +37,7 @@ object Main extends IOApp {
       dir.clear()
       dir.delete()
     } catch {
-      case t: Throwable => log.debug("Something went wrong.")
+      case _: Throwable => log.debug("Something went wrong.")
     }
 
 }
