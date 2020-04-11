@@ -1,3 +1,6 @@
+.vscode/
+.bloop/
+.metals/
 .idea/
 *.iws
 out/

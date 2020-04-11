@@ -1,13 +1,13 @@
 import cats.effect.IO
 import cats.instances.list._
 import cats.syntax.traverse._
-import journal.Logger
+import org.log4s.getLogger
 import kuyfi.TZDB._
 import shapeless.{Inl, Inr}
 
 object Diff {
 
-  private val log  = Logger("tz-diff")
+  private val log  = getLogger
   private val year = """\d{4}""".r
 
   /**

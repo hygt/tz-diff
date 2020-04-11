@@ -1,14 +1,18 @@
 name := "tz-diff"
 
-version := "0.1"
+version := "0.2"
 
-scalaVersion := "2.12.8"
+scalaVersion := "2.13.1"
 
 libraryDependencies ++= Seq(
-  "com.github.pathikrit" %% "better-files" % "3.7.1",
-  "com.github.tototoshi" %% "scala-csv" % "1.3.5",
-  "com.lihaoyi" %% "requests" % "0.1.7",
-  "io.github.cquiroz" %% "kuyfi" % "0.9.3",
-  "io.verizon.journal" %% "core" % "3.0.19",
-  "org.apache.commons" % "commons-compress" % "1.18"
+  "ch.qos.logback" % "logback-classic" % "1.3.0-alpha5",
+  "com.github.pathikrit" %% "better-files" % "3.8.0",
+  "com.github.tototoshi" %% "scala-csv" % "1.3.6",
+  "com.lihaoyi" %% "requests" % "0.5.1",
+  "io.github.cquiroz" %% "kuyfi" % "1.0.0",
+  "org.log4s" %% "log4s" % "1.8.2",
+  "org.apache.commons" % "commons-compress" % "1.20",
+  "org.scalameta" %% "munit" % "0.7.2" % Test
 )
+
+testFrameworks += new TestFramework("munit.Framework")

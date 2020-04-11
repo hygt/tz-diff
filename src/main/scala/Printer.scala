@@ -1,7 +1,10 @@
+import java.io.Writer
+
 import Diff.SimpleRow
 import better.files.File
 import cats.effect.IO
 import com.github.tototoshi.csv.CSVWriter
+import org.log4s.getLogger
 
 class Printer private (writer: CSVWriter) {
 
@@ -17,13 +20,37 @@ class Printer private (writer: CSVWriter) {
 
 object Printer {
 
-  /**
-    * @return a Printer instance that outputs to the given file.
-    */
-  def apply(file: File): Printer = new Printer(CSVWriter.open(file.toJava))
+  private val log = getLogger
 
   /**
-    * @return a Printer instance to the system's standard output.
+    * @return a Printer that writes to the given file.
     */
-  def stdout(): Printer = new Printer(CSVWriter.open(System.out))
+  def toFile(file: File): Printer = new Printer(CSVWriter.open(file.toJava))
+
+  /**
+    * @return a Printer that writes to the system's standard output.
+    */
+  def toStdout: Printer = new Printer(CSVWriter.open(System.out))
+
+  /**
+    * @return a Printer that writes to the default logger
+    */
+  def toLogger: Printer = new Printer(CSVWriter.open(new LogWriter))
+
+  private class LogWriter extends Writer {
+    val buffer = new StringBuilder
+
+    def write(cbuf: Array[Char], off: Int, len: Int): Unit = {
+      buffer.appendAll(cbuf, off, len)
+      ()
+    }
+
+    def flush(): Unit = {
+      log.info(buffer.toString.trim)
+      buffer.clear()
+    }
+
+    def close(): Unit =
+      flush()
+  }
 }

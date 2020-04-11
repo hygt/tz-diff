@@ -2,10 +2,9 @@ import java.io.{BufferedInputStream, BufferedOutputStream, ByteArrayInputStream,
 
 import better.files._
 import cats.effect.IO._
-import cats.effect.{ContextShift, IO}
-import cats.instances.list._
-import cats.syntax.parallel._
-import journal.Logger
+import cats.effect.{ContextShift, IO, Resource => IOResource}
+import cats.implicits._
+import org.log4s.getLogger
 import kuyfi.TZDB.Row
 import kuyfi.TZDBParser
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
@@ -13,7 +12,7 @@ import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
 
 object Loader {
 
-  private val log    = Logger("tz-diff")
+  private val log    = getLogger
   private val prefix = "https://data.iana.org/time-zones/releases/"
   private val suffix = ".tar.gz"
 
@@ -22,14 +21,15 @@ object Loader {
     * Each version is then parsed into a list of rows.
     *
     * @param fileName the input file
-    * @param tmpDir a temporary folder where archives will be downloaded and unpacked
     * @return pairs of TZ version strings to their parsed rows
     */
-  def getAll(fileName: String, tmpDir: File)(implicit cs: ContextShift[IO]): IO[List[(String, List[Row])]] = {
-    readInput(fileName).flatMap { versions =>
-      versions
-        .map(version => process(tmpDir / version, version))
-        .parSequence
+  def getAll(fileName: String)(implicit cs: ContextShift[IO]): IO[List[(String, List[Row])]] = {
+    IOResource.make(IO(File.newTemporaryDirectory("tzdiff")))(cleanup).use { tmpDir =>
+      readInput(fileName).flatMap { versions =>
+        versions
+          .map(version => process(tmpDir / version, version))
+          .parSequence
+      }
     }
   }
 
@@ -47,7 +47,7 @@ object Loader {
   private def fetch(version: String): IO[Array[Byte]] = IO {
     val url = s"$prefix$version$suffix"
     log.debug(s"Fetching $url")
-    requests.get(url).data.bytes
+    requests.get(url).data.array
   }
 
   private def gunzipTar(bytes: Array[Byte], dest: File): IO[Unit] = IO {
@@ -78,5 +78,15 @@ object Loader {
       tarEntry = tarIn.getNextTarEntry
     }
     tarIn.close()
+  }
+
+  private def cleanup(dir: File): IO[Unit] = IO {
+    try {
+      log.debug(s"Cleaning up temporary directory $dir")
+      dir.clear()
+      dir.delete()
+    } catch {
+      case _: Throwable => log.debug("Something went wrong.")
+    }
   }
 }

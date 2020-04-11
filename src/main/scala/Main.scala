@@ -1,43 +1,36 @@
 import better.files.File
 import cats.effect._
 import cats.syntax.applicativeError._
-import journal.Logger
+import org.log4s.getLogger
 
 object Main extends IOApp {
 
-  private val log = Logger("tz-diff")
+  private val log = getLogger
 
   /**
     * Entry-point. Outputs all differences that were found to "out.csv".
     */
   def run(args: List[String]): IO[ExitCode] = {
-    val dir     = File.newTemporaryDirectory("tzdiff")
+    val input   = "input.txt"
     val output  = File("out.csv")
-    val printer = Printer(output)
+    val printer = Printer.toFile(output)
+    run(input, printer)
+  }
+
+  def run(input: String, printer: Printer): IO[ExitCode] = {
     Loader
-      .getAll("input.txt", dir)
+      .getAll(input)
       .flatMap(pairs => Diff.process(pairs.toMap, printer))
       .map { diffs =>
         log.info(s"Found $diffs differences.")
         printer.close()
-        cleanup(dir)
         ExitCode.Success
       }
       .recover {
         case t: Throwable =>
-          log.error("Program exited with an error.", t)
-          cleanup(dir)
+          log.error(t)("Program exited with an error.")
           ExitCode.Error
       }
   }
-
-  private def cleanup(dir: File): Unit =
-    try {
-      log.debug(s"Cleaning up temporary directory $dir")
-      dir.clear()
-      dir.delete()
-    } catch {
-      case _: Throwable => log.debug("Something went wrong.")
-    }
 
 }
